@@ -27,21 +27,13 @@ namespace LamadingsTelegram
             irc.AutoRetry = true;
             irc.ActiveChannelSyncing = true;
             irc.OnRawMessage += new IrcEventHandler(OnRawMessage);
+            irc.OnDisconnected += Irc_OnDisconnected;
             irc.AutoReconnect = true;
-            string[] serverlist;
-            serverlist = new string[] { ConfigurationManager.AppSettings["IrcServer"] };
+            JoinIrc();
 
-            int port = 6667;
-            irc.Connect(serverlist, port);
 
-            irc.UseSsl = true;
-            irc.EnableUTF8Recode = true;
-            irc.Encoding = System.Text.Encoding.UTF8;
 
-            irc.Login("Lamadingbot", "Stupid Bot");
-            irc.RfcJoin(IrcChan);
-
-            irc.SendMessage(SendType.Message, IrcChan, "#makeircgreatagain");
+            //irc.SendMessage(SendType.Message, IrcChan, "#makeircgreatagain");
 
             irc.Listen();
             #endregion
@@ -51,6 +43,16 @@ namespace LamadingsTelegram
             Console.ReadLine();
             irc.Disconnect();
             Bot.StopReceiving();
+        }
+
+        private static void Irc_OnDisconnected(object sender, EventArgs e)
+        {
+            while (!irc.IsConnected)
+            {
+                System.Threading.Thread.Sleep(2000);
+                JoinIrc();
+            }
+           
         }
 
         /// <summary>
@@ -67,6 +69,22 @@ namespace LamadingsTelegram
                 
                 var t = Bot.SendTextMessageAsync(ConfigurationManager.AppSettings["TelegramChanId"], e.Data.Nick + "(irc): " + e.Data.Message);
             }
+        }
+
+        private static void JoinIrc()
+        {
+            int port = 6667;
+            string[] serverlist;
+            serverlist = new string[] { ConfigurationManager.AppSettings["IrcServer"] };
+
+            irc.Connect(serverlist, port);
+
+            irc.UseSsl = true;
+            irc.EnableUTF8Recode = true;
+            irc.Encoding = System.Text.Encoding.UTF8;
+
+            irc.Login("Lamadingbot", "Stupid Bot");
+            irc.RfcJoin(IrcChan);
         }
 
 
