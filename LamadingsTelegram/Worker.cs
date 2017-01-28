@@ -72,7 +72,7 @@ namespace LamadingsTelegramDienst
             log("disconnected triggered");
             while (!irc.IsConnected || irc.GetChannel(IrcChan) == null)
             {
-                System.Threading.Thread.Sleep(10000);
+                System.Threading.Thread.Sleep(30000);
                 JoinIrc();
             }
 
@@ -85,13 +85,31 @@ namespace LamadingsTelegramDienst
         /// <param name="e"></param>
         private static void OnRawMessage(object sender, IrcEventArgs e)
         {
-            log(e.Data.Message);
-            var x = Bot.GetMeAsync().Result;
+            try
+            {
+                log(e.Data.Message);
+                var x = Bot.GetMeAsync().Result;
+            }
+            catch (Exception exception)
+            {
+                log(exception.ToString());
+                
+            }
+           
             //only chan messages from users 
             if (!string.IsNullOrEmpty(e.Data.Message) && !string.IsNullOrEmpty(e.Data.Nick) && e.Data.Type == ReceiveType.ChannelMessage)
             {
 
-                var t = Bot.SendTextMessageAsync(ConfigurationManager.AppSettings["TelegramChanId"], e.Data.Nick + ": " + e.Data.Message);
+                try
+                {
+                    var t = Bot.SendTextMessageAsync(ConfigurationManager.AppSettings["TelegramChanId"], e.Data.Nick + ": " + e.Data.Message);
+                }
+                catch (Exception ex )
+                {
+
+                    log(ex.ToString());
+                }
+
             }
         }
 
@@ -150,19 +168,32 @@ namespace LamadingsTelegramDienst
 
 
             //bilder in ein dir speichern. dieses wird per webserver freigegeben. das letzte ist immer das origninalbild, der rest sind thumbnails. was ein scheiss
-            if (messageEventArgs.Message.Type == Telegram.Bot.Types.Enums.MessageType.PhotoMessage)
+            if (messageEventArgs.Message.Type == Telegram.Bot.Types.Enums.MessageType.PhotoMessage || messageEventArgs.Message.Type == Telegram.Bot.Types.Enums.MessageType.DocumentMessage)
             {
                 try
                 {
                     Console.WriteLine("image received");
-                    var item = messageEventArgs.Message.Photo[messageEventArgs.Message.Photo.Length - 1];
+
+                    string fileid = "";
+                    if (messageEventArgs.Message.Photo != null)
+                    {
+                        fileid = messageEventArgs.Message.Photo[messageEventArgs.Message.Photo.Length - 1].FileId;
+                    }
+                    if (messageEventArgs.Message.Document != null)
+                    {
+                        fileid = messageEventArgs.Message.Document.FileId;
+                    }
+                    if (messageEventArgs.Message.Sticker != null)
+                    {
+                        fileid = messageEventArgs.Message.Sticker.FileId;
+                    }
 
                     //get image path via json from api
-                    var fileid = Bot.GetFile(item.FileId);
+                    var file = Bot.GetFile(fileid);
                     string json;
                     using (WebClient wc = new WebClient())
                     {
-                        var tempurl = "https://api.telegram.org/bot" + ConfigurationManager.AppSettings["TelegramBotId"] + "/getFile?file_id=" + item.FileId;
+                        var tempurl = "https://api.telegram.org/bot" + ConfigurationManager.AppSettings["TelegramBotId"] + "/getFile?file_id=" + fileid;
                         json = wc.DownloadString(tempurl);
                     }
                     dynamic stuff = JsonConvert.DeserializeObject(json);
@@ -174,9 +205,9 @@ namespace LamadingsTelegramDienst
                     //download file
                     using (WebClient wc = new WebClient())
                     {
-                        string FullImageUrlPath = ImaegeUrlPath + "\\" + path.Value.Replace("photo/", "");
-                        wc.DownloadFile(pathurl, ImaegeSavePath + "\\" + path.Value.Replace("photo/", ""));
-                        irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + " (telegram): " + FullImageUrlPath.Replace(@"\", "/"));
+                        string FullImageUrlPath = ImaegeUrlPath + "\\" + path.Value.Replace("photo/", "").Replace("document/","");
+                        wc.DownloadFile(pathurl, ImaegeSavePath + "\\" + path.Value.Replace("photo/", "").Replace("document/",""));
+                        irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + FullImageUrlPath.Replace(@"\", "/"));
                     }
                 }
 
@@ -193,7 +224,8 @@ namespace LamadingsTelegramDienst
 
                 var message = messageEventArgs.Message.Text;
 
-                if (message == "!nicklist")
+
+                if (message == "!nicklist" || message == "!Nicklist" || message == "!Nickliste")
                 {
                     try
                     {
@@ -215,13 +247,26 @@ namespace LamadingsTelegramDienst
                     }
                     catch (Exception ex)
                     {
-
                     }
-
-
                 }
 
+                if (message == "!Topic" || message == "!topic")
+                {
+                    try
+                    {
+                        var userslist = new List<string> { "" };
+                        var chan = irc.GetChannel(IrcChan);
 
+                        if (chan != null)
+                        {
+                            Bot.SendTextMessageAsync(ConfigurationManager.AppSettings["TelegramChanId"], "Mein Herr und Gebieter, die Nuttem im Irc sprechen über: " + chan.Topic);
+                        }
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                }
                 irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + message);
             }
 

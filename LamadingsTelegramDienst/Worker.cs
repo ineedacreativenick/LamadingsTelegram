@@ -94,7 +94,8 @@ namespace LamadingsTelegramDienst
             serverlist = new string[] { ConfigurationManager.AppSettings["IrcServer"] };
 
             irc.Connect(serverlist, port);
-
+            irc.EnableUTF8Recode = true;
+            irc.Encoding = System.Text.Encoding.UTF8;
             irc.UseSsl = true;
             irc.EnableUTF8Recode = true;
             irc.Encoding = System.Text.Encoding.UTF8;
@@ -158,7 +159,7 @@ namespace LamadingsTelegramDienst
 
                 var message = messageEventArgs.Message.Text;
 
-                if (message == "!nicklist")
+                if (message == "!nicklist" || message == "!Nicklist" || message == "!Nickliste")
                 {
                     var userslist = new List<string> { "" };
                     var chan = irc.GetChannel(IrcChan);
@@ -171,15 +172,21 @@ namespace LamadingsTelegramDienst
                         }
                         irc.SendMessage(SendType.Message, IrcChan, "Mein Herr und Gebieter, hier ist deine Nicklist: " + string.Join(",", userslist));
                     }
-                    return;
-                    
+                    return;                    
                 }
+                if (message == "!Topic" || message == "!topic" )
+                {
+                    var chan = irc.GetChannel(IrcChan);
 
+                    if (chan != null)
+                    {
+                        irc.SendMessage(SendType.Message, IrcChan, "Mein Herr und Gebieter, die Nuttem im Irc sprechen über: " + chan.Topic);
+                    }
+                    return;
+                }
 
                 irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + message);
             }
-
         }
-
     }
 }
