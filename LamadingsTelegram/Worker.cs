@@ -119,9 +119,15 @@ namespace LamadingsTelegramDienst
             log("joinirc triggered");
             try
             {
-                int port = 6667;
+                int port = 6697;
                 string[] serverlist;
                 serverlist = new string[] { ConfigurationManager.AppSettings["IrcServer"] };
+
+
+                irc.UseSsl = true;
+                irc.EnableUTF8Recode = true;
+                irc.Encoding = System.Text.Encoding.UTF8;
+                irc.OnDisconnected += Irc_OnDisconnected;
 
                 if (!irc.IsConnected)
                 {
@@ -131,10 +137,6 @@ namespace LamadingsTelegramDienst
 
 
 
-                //irc.UseSsl = true;
-                irc.EnableUTF8Recode = true;
-                irc.Encoding = System.Text.Encoding.UTF8;
-                irc.OnDisconnected += Irc_OnDisconnected;
                 irc.Login("Lamadingbot", "Stupid Bot");
                 irc.RfcJoin(IrcChan);
             }
@@ -203,12 +205,16 @@ namespace LamadingsTelegramDienst
                     var pathurl = @"https://api.telegram.org/file/bot" + ConfigurationManager.AppSettings["TelegramBotId"] + @"/" + path.Value;
 
                     //download file
-                    using (WebClient wc = new WebClient())
-                    {
-                        string FullImageUrlPath = ImaegeUrlPath + "\\" + path.Value.Replace("photo/", "").Replace("document/","");
-                        wc.DownloadFile(pathurl, ImaegeSavePath + "\\" + path.Value.Replace("photo/", "").Replace("document/",""));
-                        irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + FullImageUrlPath.Replace(@"\", "/"));
-                    }
+                    //using (WebClient wc = new WebClient())
+                    //{
+                    //    string FullImageUrlPath = ImaegeUrlPath + "\\" + path.Value.Replace("photo/", "").Replace("document/","");
+                    //    wc.DownloadFile(pathurl, ImaegeSavePath + "\\" + path.Value.Replace("photo/", "").Replace("document/",""));
+                    //    irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + FullImageUrlPath.Replace(@"\", "/"));
+                    //}
+
+                    //noooo post the file
+                    irc.SendMessage(SendType.Message, IrcChan, messageEventArgs.Message.From.Username + ": " + pathurl);
+
                 }
 
                 catch (Exception ex)
